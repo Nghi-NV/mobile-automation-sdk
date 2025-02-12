@@ -27,7 +27,7 @@ SDK này được tạo ra để tự động hóa quá trình build ứng dụn
 1. Clone repository:
 
 ```bash
-git clone https://github.com/your-repo/mobile-build-automation-sdk.git
+git clone https://github.com/Nghi-NV/mobile-automation-sdk.git
 ```
 
 2. Cấu hình môi trường:
