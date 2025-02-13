@@ -113,13 +113,13 @@ main() {
     local new_version=$(bump_version "$current_version" "$version_type")
     log_info "New version: $new_version"
     
-    # Update version based on SDK type
-    if [ "$SDK" = "react-native" ]; then
+    # Update version based on FLAT_FORM type
+    if [ "$FLAT_FORM" = "react-native" ]; then
         update_react_native_version "$new_version"
-    elif [ "$SDK" = "flutter" ]; then
+    elif [ "$FLAT_FORM" = "flutter" ]; then
         update_flutter_version "$new_version"
     else
-        log_error "Unsupported SDK type: $SDK"
+        log_error "Unsupported FLAT_FORM type: $FLAT_FORM"
         exit 1
     fi
     

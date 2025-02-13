@@ -8,7 +8,7 @@ load_env
 validate_env
 
 # Constants
-KEYSTORE_DIR="$PROJECT_PATH/android/app/keystore"
+KEYSTORE_DIR="$PROJECT_PATH/android"
 KEYSTORE_PROPERTIES="$PROJECT_PATH/android/keystore.properties"
 
 # Function to validate keystore environment
@@ -125,13 +125,63 @@ setup_keystore_properties() {
     
     # Create keystore.properties file
     cat > "$KEYSTORE_PROPERTIES" <<EOF
-storeFile=$ANDROID_KEYSTORE_PATH
+storeFile=../app-key.jks
 storePassword=$ANDROID_KEYSTORE_PASSWORD
 keyAlias=$ANDROID_KEY_ALIAS
 keyPassword=$ANDROID_KEY_PASSWORD
 EOF
     
-    log_info "Keystore properties configured"
+    # Create or update build.gradle configuration
+    local gradle_config="$PROJECT_PATH/android/app/build.gradle"
+    
+    log_info "Adding signing configuration to build.gradle..."
+    
+    # Check if signingConfigs block already exists
+    if grep -q "signingConfigs {" "$gradle_config"; then
+        log_info "signingConfigs block already exists. Updating..."
+
+        # Update existing signingConfigs block
+        sed -i -E "s/(signingConfigs \{[^}]*)(\s*release \{[^}]*\})([^}]*\})/\1\n        release {\n            keyAlias \"$ANDROID_KEY_ALIAS\"\n            keyPassword \"$ANDROID_KEY_PASSWORD\"\n            storeFile file(\"..\/app-key.jks\")\n            storePassword \"$ANDROID_KEYSTORE_PASSWORD\"\n        }\n    \3/g" "$gradle_config"
+
+
+    else
+        log_info "signingConfigs block does not exist. Adding..."
+        # Add keystore to build.gradle, handling different possible line endings
+        sed -i '/android {/a\    signingConfigs {\n        release {\n            keyAlias "'"$ANDROID_KEY_ALIAS"'"\n            keyPassword "'"$ANDROID_KEY_PASSWORD"'"\n            storeFile file("../app-key.jks")\n            storePassword "'"$ANDROID_KEYSTORE_PASSWORD"'"\n        }\n    }' "$gradle_config"
+    fi
+
+
+    # Check if buildTypes and release block already exist.  Handle multiple scenarios.
+    if grep -q "buildTypes {" "$gradle_config"; then
+        log_info "buildTypes block exists."
+
+        if grep -q "buildTypes {.*release {" "$gradle_config"; then
+            log_info "release block exists within buildTypes. Updating..."
+
+             # Find the release block within buildTypes and replace its contents
+            sed -i -E '/buildTypes \{/,/}/ {
+                /release \{/ {
+                    :a
+                    N
+                    /}/! ba
+                    s/release \{[^}]*\}/release {\n            signingConfig signingConfigs.release\n            minifyEnabled true\n            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"\n        }/
+                }
+            }' "$gradle_config"
+
+        else
+            log_info "release block does not exist within buildTypes.  Adding..."
+             sed -i '/buildTypes {/a\        release {\n            signingConfig signingConfigs.release\n            minifyEnabled true\n            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"\n        }' "$gradle_config"
+
+        fi
+
+    else
+        log_info "buildTypes block does not exist. Adding..."
+        # Add buildTypes and signingConfig to release buildType (if buildTypes doesn't exist)
+        sed -i '/android {/a\    buildTypes {\n        release {\n            signingConfig signingConfigs.release\n            minifyEnabled true\n            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"\n        }\n    }' "$gradle_config"
+    fi
+
+
+    log_info "Keystore properties and signing configuration completed"
 }
 
 # Function to export keystore

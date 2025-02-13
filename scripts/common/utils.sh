@@ -9,9 +9,31 @@ NC='\033[0m' # No Color
 # Load environment variables
 load_env() {
     if [ -f .env ]; then
-        export $(cat .env | grep -v '#' | xargs)
+        # Export all variables from .env
+        set -a
+        source .env
+        set +a
+        
+        # Validate FLAT_FORM
+        if [ -z "$FLAT_FORM" ]; then
+            log_error "FLAT_FORM is not set in .env file"
+            log_info "Please set FLAT_FORM to either 'flutter' or 'react-native'"
+            exit 1
+        fi
+
+        if [[ ! "$FLAT_FORM" =~ ^(flutter|react-native)$ ]]; then
+            log_error "Invalid FLAT_FORM value: $FLAT_FORM"
+            log_info "FLAT_FORM must be either 'flutter' or 'react-native'"
+            exit 1
+        fi
+
+        # Log key variables
+        log_info "Environment loaded:"
+        log_info "FLAT_FORM: $FLAT_FORM"
+        log_info "PROJECT_NAME: $PROJECT_NAME"
+        log_info "PROJECT_PATH: $PROJECT_PATH"
     else
-        echo -e "${RED}Error: .env file not found${NC}"
+        log_error ".env file not found"
         exit 1
     fi
 }
@@ -33,9 +55,9 @@ log_error() {
 get_version_number() {
     local version=""
     
-    if [ "$SDK" = "react-native" ]; then
+    if [ "$FLAT_FORM" = "react-native" ]; then
         version=$(grep "version" "$PROJECT_PATH/package.json" | head -1 | awk -F: '{ print $2 }' | sed 's/[",]//g' | tr -d '[[:space:]]')
-    elif [ "$SDK" = "flutter" ]; then
+    elif [ "$FLAT_FORM" = "flutter" ]; then
         version=$(grep "version:" "$PROJECT_PATH/pubspec.yaml" | head -1 | awk '{ print $2 }' | sed 's/+.*$//')
     fi
     
@@ -45,13 +67,13 @@ get_version_number() {
 get_build_number() {
     local build_number=""
     
-    if [ "$SDK" = "react-native" ]; then
+    if [ "$FLAT_FORM" = "react-native" ]; then
         if [ -f "$PROJECT_PATH/ios/build_number" ]; then
             build_number=$(cat "$PROJECT_PATH/ios/build_number")
         else
             build_number="1"
         fi
-    elif [ "$SDK" = "flutter" ]; then
+    elif [ "$FLAT_FORM" = "flutter" ]; then
         build_number=$(grep "version:" "$PROJECT_PATH/pubspec.yaml" | head -1 | awk -F'+' '{ print $2 }')
     fi
     
@@ -62,11 +84,11 @@ increment_build_number() {
     local current_build_number=$(get_build_number)
     local new_build_number=$((current_build_number + 1))
     
-    if [ "$SDK" = "react-native" ]; then
+    if [ "$FLAT_FORM" = "react-native" ]; then
         echo "$new_build_number" > "$PROJECT_PATH/ios/build_number"
         # Update Info.plist
         /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $new_build_number" "$PROJECT_PATH/ios/$PROJECT_NAME/Info.plist"
-    elif [ "$SDK" = "flutter" ]; then
+    elif [ "$FLAT_FORM" = "flutter" ]; then
         local version=$(get_version_number)
         sed -i '' "s/version: .*$/version: $version+$new_build_number/" "$PROJECT_PATH/pubspec.yaml"
     fi
@@ -214,7 +236,7 @@ upload_to_testflight() {
 
 # Validate required environment variables
 validate_env() {
-    local required_vars=("PROJECT_NAME" "PROJECT_PATH" "SDK")
+    local required_vars=("PROJECT_NAME" "PROJECT_PATH" "FLAT_FORM")
     
     for var in "${required_vars[@]}"; do
         if [ -z "${!var}" ]; then

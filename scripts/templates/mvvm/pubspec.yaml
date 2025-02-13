@@ -1,0 +1,22 @@
+name: {{project_name}}
+description: A new Flutter project using MVVM architecture.
+
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ">=2.17.0 <3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.0.0
+  get_it: ^7.2.0
+  stacked: ^3.0.0
+  stacked_services: ^0.9.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+  build_runner: ^2.1.11

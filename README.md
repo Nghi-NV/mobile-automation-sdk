@@ -174,10 +174,10 @@ Sử dụng script `version.sh` để quản lý version:
 1. **Lỗi Keystore**
 ```bash
 # Kiểm tra keystore
-./scripts/android/sign.sh verify-keystore
+sh ./scripts/android/sign.sh verify
 
 # Tạo keystore mới
-./scripts/android/sign.sh generate-keystore
+sh ./scripts/android/sign.sh generate
 ```
 
 2. **Lỗi Gradle**
